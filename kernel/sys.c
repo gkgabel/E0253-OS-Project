@@ -73,7 +73,12 @@
 #include <asm/io.h>
 #include <asm/unistd.h>
 
+
 #include "uid16.h"
+
+/*new additions here for assignment*/
+#include <../kernel/sched/sched.h>
+#include <linux/sched/hotplug.h> //new
 
 #ifndef SET_UNALIGN_CTL
 # define SET_UNALIGN_CTL(a, b)	(-EINVAL)
@@ -2788,3 +2793,32 @@ COMPAT_SYSCALL_DEFINE1(sysinfo, struct compat_sysinfo __user *, info)
 	return 0;
 }
 #endif /* CONFIG_COMPAT */
+
+//new system call: assignment 0
+
+SYSCALL_DEFINE0(isolate_cpu)
+{
+	//Here we are isolating CPU 1 by using the cpu mask for all task structs
+	struct task_struct *task;
+	cpumask_t temp, *curr; //initialising the cpu mask
+
+	for_each_process(task) //iterating over each process
+	{
+		curr=&task->cpus_mask; 
+		//printk("PID %d",task->pid);
+		//printk("MASK %*pbl\n",cpumask_pr_args(&task->cpus_mask));
+		if ((task->flags & PF_KTHREAD) && kthread_is_per_cpu(task))  //skipped per cpu kthreads
+			continue;
+		cpumask_setall(&temp);
+		cpumask_clear_cpu(1, &temp);
+		cpumask_and(&temp,curr,&temp);
+		if(cpumask_empty(&temp))
+		{
+			cpumask_set_cpu(3,&temp); //if cpumask is empty then move this thread to core 3 (arbitrarily chosen). Left the task of balancing to load balancer
+		}
+		set_cpus_allowed_ptr(task, &temp);
+		wake_up_process(task); //attempt to wake up processes in interruptible_sleep
+		//printk("CHANGED MASK %*pbl\n",cpumask_pr_args(&task->cpus_mask));
+	}
+  	return 0;
+}

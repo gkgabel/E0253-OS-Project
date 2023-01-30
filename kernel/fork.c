@@ -1052,6 +1052,15 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
 	tsk->reported_split_lock = 0;
 #endif
 
+//Changed code here to prevent processes from getting scheduled at core 1
+	if ((tsk->flags & PF_KTHREAD) && kthread_is_per_cpu(tsk))  //skipped per cpu kthreads
+		return tsk;
+	cpumask_clear_cpu(1, &tsk->cpus_mask);
+	if(cpumask_empty(&tsk->cpus_mask))
+	{
+		cpumask_set_cpu(3,&tsk->cpus_mask); //if cpumask is empty then move this thread to core 3 (arbitrarily chosen). Left the task of balancing to load balancer
+	}
+	
 	return tsk;
 
 free_stack:

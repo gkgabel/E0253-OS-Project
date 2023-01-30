@@ -67,7 +67,8 @@ modules.order
 /modules.builtin
 /modules.builtin.modinfo
 /modules.nsdeps
-
+/arch.img
+/buildroot
 #
 # RPM spec file (make rpm-pkg)
 #
