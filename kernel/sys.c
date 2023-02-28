@@ -2814,7 +2814,7 @@ SYSCALL_DEFINE0(isolate_cpu)
 		cpumask_and(&temp,curr,&temp);
 		if(cpumask_empty(&temp))
 		{
-			cpumask_set_cpu(3,&temp); //if cpumask is empty then move this thread to core 3 (arbitrarily chosen). Left the task of balancing to load balancer
+			cpumask_set_cpu(1,&temp); //if cpumask is empty then move this thread to core 3 (arbitrarily chosen). Left the task of balancing to load balancer
 		}
 		set_cpus_allowed_ptr(task, &temp);
 		wake_up_process(task); //attempt to wake up processes in interruptible_sleep

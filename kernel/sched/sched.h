@@ -186,7 +186,10 @@ static inline int fair_policy(int policy)
 {
 	return policy == SCHED_NORMAL || policy == SCHED_BATCH;
 }
-
+static inline int rsdl_policy(int policy)
+{
+	return policy == SCHED_RSDL;
+}
 static inline int rt_policy(int policy)
 {
 	return policy == SCHED_FIFO || policy == SCHED_RR;
@@ -199,11 +202,13 @@ static inline int dl_policy(int policy)
 static inline bool valid_policy(int policy)
 {
 	return idle_policy(policy) || fair_policy(policy) ||
-		rt_policy(policy) || dl_policy(policy);
+		rt_policy(policy) || dl_policy(policy)||rsdl_policy(policy);
 }
 
 static inline int task_has_idle_policy(struct task_struct *p)
 {
+
+
 	return idle_policy(p->policy);
 }
 
@@ -303,10 +308,7 @@ static inline int dl_bandwidth_enabled(void)
  *  - store the maximum -deadline bandwidth of each cpu;
  *  - cache the fraction of bandwidth that is currently allocated in
  *    each root domain;
- *
- * This is all done in the data structure below. It is similar to the
- * one used for RT-throttling (rt_bandwidth), with the main difference
- * that, since here we are only interested in admission control, we
+ *enqueue_, since here we are only interested in admission control, we
  * do not decrease any runtime while the group "executes", neither we
  * need a timer to replenish it.
  *
@@ -351,6 +353,7 @@ extern int  dl_cpu_busy(int cpu, struct task_struct *p);
 
 struct cfs_rq;
 struct rt_rq;
+struct rsdl_rq;
 
 extern struct list_head task_groups;
 
@@ -396,7 +399,10 @@ struct task_group {
 
 #ifdef	CONFIG_SMP
 	/*
-	 * load_avg can be heavily contended at clock tick time, so put
+	 * load_avg can be heastatic inline int fair_policy(int policy)
+{
+	return policy == SCHED_NORMAL || policy == SCHED_BATCH;
+}ly contended at clock tick time, so put
 	 * it in its own cacheline separated from the fields above which
 	 * will also be accessed at each tick.
 	 */
@@ -663,6 +669,63 @@ struct cfs_rq {
 #endif /* CONFIG_CFS_BANDWIDTH */
 #endif /* CONFIG_FAIR_GROUP_SCHED */
 };
+
+
+/*From here starts the RSDL tailored declarations
+-------------------------
+first of all below is not the rsdl run queue. it is just different 
+params of rsdl run queue. But what to put here? 
+--------------------------
+Q. Do i need to make new run queue declaration just for rsdl.? 
+Can I not take advantage of run queue already present in linux kernel
+as a RB tree? Is it implemented as RB tree really ? No then how will it
+be an O(1) scheduler
+*/
+
+/*This a definition for a singly(do i need a doubly ll?) linked list node that we will be using in our
+rsdl ready data structure*/
+
+struct ll_node{
+	struct ll_node *next, *prev;
+	/*What should be inside this node. a pointer to a task struct?*/
+	struct task_struct* task;
+};
+
+/*Below is a declaration for the array of linked list which will be our 
+actual ready queue implementation*/
+struct ll_array{
+	struct ll_node* pri_array[40+1]; 
+	/*one extra level as a place to for tasks to rest until they are
+	swapped in expired list*/ 
+
+};
+
+struct rsdl_rq {
+	struct ll_array *active, *expired;
+	/* pri_rotate = used to keep track of current priority ll_array index
+	running */
+	struct task_struct *curr;
+	int nr_running;
+	int pri_rotate;
+	int pri_level_on_flight; //forgot why i made this
+	int priority_time_slice; //per priority time slice in active queue 
+	/*per_tsk_time = used to define the time quantum for each task*/
+	//u64 per_tsk_time; not used since we are looking in terms of tick
+ 	/*level_time = used to define time given to each priority level
+	for running (here it is same for all priority levels)*/
+	// u64 level_time; not used because we are doing in terms of scheduler tick (instead used priority time slice)
+	
+	/*Q1. Do we need an nr_running field here which tells
+	 the number of runnable tasks in the queue. Maybe we do but for
+	 each priority level in active queue
+	 -------------------------
+	 In RSDL we have two list: active and expired. So we have to
+	 design two lists. I think we can have two pointers pointing to
+	 two arrays of linked list where array index represents 
+	 the nice value  */
+	 
+};
+
 
 static inline int rt_bandwidth_enabled(void)
 {
@@ -999,6 +1062,7 @@ struct rq {
 	struct cfs_rq		cfs;
 	struct rt_rq		rt;
 	struct dl_rq		dl;
+	struct rsdl_rq		rsdl; //rsdl rq defined inside rq struct
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	/* list of leaf cfs_rq on this CPU: */
@@ -2260,6 +2324,7 @@ extern const struct sched_class stop_sched_class;
 extern const struct sched_class dl_sched_class;
 extern const struct sched_class rt_sched_class;
 extern const struct sched_class fair_sched_class;
+extern const struct sched_class rsdl_sched_class;
 extern const struct sched_class idle_sched_class;
 
 static inline bool sched_stop_runnable(struct rq *rq)
@@ -2284,6 +2349,7 @@ static inline bool sched_fair_runnable(struct rq *rq)
 
 extern struct task_struct *pick_next_task_fair(struct rq *rq, struct task_struct *prev, struct rq_flags *rf);
 extern struct task_struct *pick_next_task_idle(struct rq *rq);
+extern struct task_struct *pick_next_task_rsdl(struct rq *rq); 
 
 #define SCA_CHECK		0x01
 #define SCA_MIGRATE_DISABLE	0x02
@@ -2355,6 +2421,8 @@ extern void update_max_interval(void);
 extern void init_sched_dl_class(void);
 extern void init_sched_rt_class(void);
 extern void init_sched_fair_class(void);
+//added function prototype for rsdl schedule class
+extern void init_sched_rsdl_class(void);
 
 extern void reweight_task(struct task_struct *p, int prio);
 
@@ -2766,6 +2834,7 @@ static inline void resched_latency_warn(int cpu, u64 latency) {}
 extern void init_cfs_rq(struct cfs_rq *cfs_rq);
 extern void init_rt_rq(struct rt_rq *rt_rq);
 extern void init_dl_rq(struct dl_rq *dl_rq);
+extern void init_rsdl_rq(struct rsdl_rq *rsdl_rq);
 
 extern void cfs_bandwidth_usage_inc(void);
 extern void cfs_bandwidth_usage_dec(void);

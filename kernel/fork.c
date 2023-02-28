@@ -1058,7 +1058,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
 	cpumask_clear_cpu(1, &tsk->cpus_mask);
 	if(cpumask_empty(&tsk->cpus_mask))
 	{
-		cpumask_set_cpu(3,&tsk->cpus_mask); //if cpumask is empty then move this thread to core 3 (arbitrarily chosen). Left the task of balancing to load balancer
+		cpumask_set_cpu(1,&tsk->cpus_mask); //if cpumask is empty then move this thread to core 1 (arbitrarily chosen). Left the task of balancing to load balancer
 	}
 	
 	return tsk;

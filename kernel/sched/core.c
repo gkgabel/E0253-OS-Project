@@ -679,7 +679,7 @@ struct rq *task_rq_lock(struct task_struct *p, struct rq_flags *rf)
 
 static void update_rq_clock_task(struct rq *rq, s64 delta)
 {
-/*
+	/*
  * In theory, the compile should just see 0 here, and optimize out the call
  * to sched_rt_avg_update. But I don't trust it...
  */
@@ -874,11 +874,11 @@ static inline void hrtick_rq_init(struct rq *rq)
 		typeof(ptr) _ptr = (ptr);				\
 		typeof(mask) _mask = (mask);				\
 		typeof(*_ptr) _val = *_ptr;				\
-									\
+                                                                   \
 		do {							\
 		} while (!try_cmpxchg(_ptr, &_val, _val | _mask));	\
 	_val;								\
-})
+	})
 
 #if defined(CONFIG_SMP) && defined(TIF_POLLING_NRFLAG)
 /*
@@ -1219,7 +1219,7 @@ bool sched_can_stop_tick(struct rq *rq)
 #endif /* CONFIG_SMP */
 
 #if defined(CONFIG_RT_GROUP_SCHED) || (defined(CONFIG_FAIR_GROUP_SCHED) && \
-			(defined(CONFIG_SMP) || defined(CONFIG_CFS_BANDWIDTH)))
+	 (defined(CONFIG_SMP) || defined(CONFIG_CFS_BANDWIDTH)))
 /*
  * Iterate task_group tree rooted at *from, calling @down when first entering a
  * node and @up when leaving it for the final time.
@@ -1376,7 +1376,7 @@ static inline void uclamp_se_set(struct uclamp_se *uc_se,
 
 static inline unsigned int
 uclamp_idle_value(struct rq *rq, enum uclamp_id clamp_id,
-		  unsigned int clamp_value)
+					     unsigned int clamp_value)
 {
 	/*
 	 * Avoid blocked utilization pushing up the frequency when we go
@@ -1403,7 +1403,7 @@ static inline void uclamp_idle_reset(struct rq *rq, enum uclamp_id clamp_id,
 
 static inline
 unsigned int uclamp_rq_max_value(struct rq *rq, enum uclamp_id clamp_id,
-				   unsigned int clamp_value)
+					       unsigned int clamp_value)
 {
 	struct uclamp_bucket *bucket = rq->uclamp[clamp_id].bucket;
 	int bucket_id = UCLAMP_BUCKETS - 1;
@@ -1782,7 +1782,7 @@ static void uclamp_sync_util_min_rt_default(void)
 }
 
 static int sysctl_sched_uclamp_handler(struct ctl_table *table, int write,
-				void *buffer, size_t *lenp, loff_t *ppos)
+				       void *buffer, size_t *lenp, loff_t *ppos)
 {
 	bool update_root_tg = false;
 	int old_min, old_max, old_min_rt;
@@ -3038,8 +3038,8 @@ void force_compatible_cpus_allowed_ptr(struct task_struct *p)
 out_set_mask:
 	if (printk_ratelimit()) {
 		printk_deferred("Overriding affinity for process %d (%s) to CPUs %*pbl\n",
-				task_pid_nr(p), p->comm,
-				cpumask_pr_args(override_mask));
+			task_pid_nr(p), p->comm,
+			cpumask_pr_args(override_mask));
 	}
 
 	WARN_ON(set_cpus_allowed_ptr(p, override_mask));
@@ -3470,7 +3470,7 @@ out:
 		 */
 		if (p->mm && printk_ratelimit()) {
 			printk_deferred("process %d (%s) no longer affine to cpu%d\n",
-					task_pid_nr(p), p->comm, cpu);
+				task_pid_nr(p), p->comm, cpu);
 		}
 	}
 
@@ -3662,7 +3662,7 @@ ttwu_do_activate(struct rq *rq, struct task_struct *p, int wake_flags,
 		en_flags |= ENQUEUE_MIGRATED;
 	else
 #endif
-	if (p->in_iowait) {
+		if (p->in_iowait) {
 		delayacct_blkio_end(p);
 		atomic_dec(&task_rq(p)->nr_iowait);
 	}
@@ -4463,7 +4463,7 @@ __setup("schedstats=", setup_schedstats);
 
 #ifdef CONFIG_PROC_SYSCTL
 static int sysctl_schedstats(struct ctl_table *table, int write, void *buffer,
-		size_t *lenp, loff_t *ppos)
+			     size_t *lenp, loff_t *ppos)
 {
 	struct ctl_table t;
 	int err;
@@ -4576,8 +4576,12 @@ int sched_fork(unsigned long clone_flags, struct task_struct *p)
 	else if (rt_prio(p->prio))
 		p->sched_class = &rt_sched_class;
 	else
+	{
+		if(p->policy==7)
+		p->sched_class = &rsdl_sched_class;
+		else
 		p->sched_class = &fair_sched_class;
-
+	}
 	init_entity_runnable_average(&p->se);
 
 
@@ -4751,7 +4755,7 @@ static __always_inline void fire_sched_in_preempt_notifiers(struct task_struct *
 
 static void
 __fire_sched_out_preempt_notifiers(struct task_struct *curr,
-				   struct task_struct *next)
+					       struct task_struct *next)
 {
 	struct preempt_notifier *notifier;
 
@@ -4775,7 +4779,7 @@ static inline void fire_sched_in_preempt_notifiers(struct task_struct *curr)
 
 static inline void
 fire_sched_out_preempt_notifiers(struct task_struct *curr,
-				 struct task_struct *next)
+						    struct task_struct *next)
 {
 }
 
@@ -4985,7 +4989,7 @@ static inline void kmap_local_sched_in(void)
  */
 static inline void
 prepare_task_switch(struct rq *rq, struct task_struct *prev,
-		    struct task_struct *next)
+				       struct task_struct *next)
 {
 	kcov_prepare_switch(prev);
 	sched_info_switch(rq, prev, next);
@@ -5613,7 +5617,7 @@ static inline void sched_tick_stop(int cpu) { }
 #endif
 
 #if defined(CONFIG_PREEMPTION) && (defined(CONFIG_DEBUG_PREEMPT) || \
-				defined(CONFIG_TRACE_PREEMPT_TOGGLE))
+				   defined(CONFIG_TRACE_PREEMPT_TOGGLE))
 /*
  * If the value passed in is equal to the current preempt count
  * then we just disabled preemption. Start timing the latency.
@@ -5644,7 +5648,7 @@ void preempt_count_add(int val)
 	 * Spinlock count overflowing soon?
 	 */
 	DEBUG_LOCKS_WARN_ON((preempt_count() & PREEMPT_MASK) >=
-				PREEMPT_MASK - 10);
+			    PREEMPT_MASK - 10);
 #endif
 	preempt_latency_start(val);
 }
@@ -5673,7 +5677,7 @@ void preempt_count_sub(int val)
 	 * Is the spinlock portion underflowing?
 	 */
 	if (DEBUG_LOCKS_WARN_ON((val < PREEMPT_MASK) &&
-			!(preempt_count() & PREEMPT_MASK)))
+				!(preempt_count() & PREEMPT_MASK)))
 		return;
 #endif
 
@@ -5709,7 +5713,7 @@ static noinline void __schedule_bug(struct task_struct *prev)
 		return;
 
 	printk(KERN_ERR "BUG: scheduling while atomic: %s/%d/0x%08x\n",
-		prev->comm, prev->pid, preempt_count());
+	       prev->comm, prev->pid, preempt_count());
 
 	debug_show_held_locks(prev);
 	print_modules();
@@ -5743,7 +5747,7 @@ static inline void schedule_debug(struct task_struct *prev, bool preempt)
 #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
 	if (!preempt && READ_ONCE(prev->__state) && prev->non_block_count) {
 		printk(KERN_ERR "BUG: scheduling in a non-blocking section: %s/%d/%i\n",
-			prev->comm, prev->pid, prev->non_block_count);
+		       prev->comm, prev->pid, prev->non_block_count);
 		dump_stack();
 		add_taint(TAINT_WARN, LOCKDEP_STILL_OK);
 	}
@@ -5800,11 +5804,17 @@ __pick_next_task(struct rq *rq, struct task_struct *prev, struct rq_flags *rf)
 	 */
 	if (likely(!sched_class_above(prev->sched_class, &fair_sched_class) &&
 		   rq->nr_running == rq->cfs.h_nr_running)) {
-
-		p = pick_next_task_fair(rq, prev, rf);
-		if (unlikely(p == RETRY_TASK))
+		if(prev->policy!=7)
+		{
+			p = pick_next_task_fair(rq, prev, rf);
+			if (unlikely(p == RETRY_TASK))
 			goto restart;
-
+		}
+		//put a function call to pick_next_task_rsdl() and if no task then go to pick_next_task_idle
+		//below comment can cause a problem //careful here //i may be wrong
+		else {
+			p = pick_next_task_rsdl(rq);
+		}
 		/* Assume the next prioritized class is idle_sched_class */
 		if (!p) {
 			put_prev_task(rq, prev);
@@ -6826,8 +6836,10 @@ static void __setscheduler_prio(struct task_struct *p, int prio)
 	else if (rt_prio(prio))
 		p->sched_class = &rt_sched_class;
 	else
-		p->sched_class = &fair_sched_class;
-
+	{
+		if(p->policy==7)p->sched_class = &rsdl_sched_class;
+		else p->sched_class = &fair_sched_class;
+	}
 	p->prio = prio;
 }
 
@@ -7300,7 +7312,7 @@ static struct task_struct *find_process_by_pid(pid_t pid)
 #define SETPARAM_POLICY	-1
 
 static void __setscheduler_params(struct task_struct *p,
-		const struct sched_attr *attr)
+				  const struct sched_attr *attr)
 {
 	int policy = attr->sched_policy;
 
@@ -7311,7 +7323,7 @@ static void __setscheduler_params(struct task_struct *p,
 
 	if (dl_policy(policy))
 		__setparam_dl(p, attr);
-	else if (fair_policy(policy))
+	else if (fair_policy(policy) || rsdl_policy(policy))
 		p->static_prio = NICE_TO_PRIO(attr->sched_nice);
 
 	/*
@@ -7512,15 +7524,15 @@ change:
 		 * assigned.
 		 */
 		if (rt_bandwidth_enabled() && rt_policy(policy) &&
-				task_group(p)->rt_bandwidth.rt_runtime == 0 &&
-				!task_group_is_autogroup(task_group(p))) {
+		    task_group(p)->rt_bandwidth.rt_runtime == 0 &&
+		    !task_group_is_autogroup(task_group(p))) {
 			retval = -EPERM;
 			goto unlock;
 		}
 #endif
 #ifdef CONFIG_SMP
 		if (dl_bandwidth_enabled() && dl_policy(policy) &&
-				!(attr->sched_flags & SCHED_FLAG_SUGOV)) {
+		    !(attr->sched_flags & SCHED_FLAG_SUGOV)) {
 			cpumask_t *span = rq->rd->span;
 
 			/*
@@ -7854,7 +7866,7 @@ SYSCALL_DEFINE2(sched_setparam, pid_t, pid, struct sched_param __user *, param)
  * @flags: for future extension.
  */
 SYSCALL_DEFINE3(sched_setattr, pid_t, pid, struct sched_attr __user *, uattr,
-			       unsigned int, flags)
+		unsigned int, flags)
 {
 	struct sched_attr attr;
 	struct task_struct *p;
@@ -9610,9 +9622,10 @@ void __init sched_init(void)
 	int i;
 
 	/* Make sure the linker didn't screw up */
-	BUG_ON(&idle_sched_class != &fair_sched_class + 1 ||
+	BUG_ON(&idle_sched_class != &rsdl_sched_class + 1 ||
+	       &rsdl_sched_class != &fair_sched_class + 1 ||
 	       &fair_sched_class != &rt_sched_class + 1 ||
-	       &rt_sched_class   != &dl_sched_class + 1);
+	       &rt_sched_class != &dl_sched_class + 1);
 #ifdef CONFIG_SMP
 	BUG_ON(&dl_sched_class != &stop_sched_class + 1);
 #endif
@@ -9687,6 +9700,7 @@ void __init sched_init(void)
 		init_cfs_rq(&rq->cfs);
 		init_rt_rq(&rq->rt);
 		init_dl_rq(&rq->dl);
+		init_rsdl_rq(&rq->rsdl);
 #ifdef CONFIG_FAIR_GROUP_SCHED
 		INIT_LIST_HEAD(&rq->leaf_cfs_rq_list);
 		rq->tmp_alone_branch = &rq->leaf_cfs_rq_list;
@@ -9792,6 +9806,7 @@ void __init sched_init(void)
 	balance_push_set(smp_processor_id(), false);
 #endif
 	init_sched_fair_class();
+	init_sched_rsdl_class(); //new:added a reference for init rsdl sched class here
 
 	psi_init();
 
@@ -9813,10 +9828,10 @@ void __might_sleep(const char *file, int line)
 	 * otherwise we will destroy state.
 	 */
 	WARN_ONCE(state != TASK_RUNNING && current->task_state_change,
-			"do not call blocking ops when !TASK_RUNNING; "
+		  "do not call blocking ops when !TASK_RUNNING; "
 			"state=%x set at [<%p>] %pS\n", state,
 			(void *)current->task_state_change,
-			(void *)current->task_state_change);
+		  (void *)current->task_state_change);
 
 	__might_resched(file, line, 0);
 }
@@ -10891,13 +10906,13 @@ static u64 cpu_rt_period_read_uint(struct cgroup_subsys_state *css,
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
 static s64 cpu_idle_read_s64(struct cgroup_subsys_state *css,
-			       struct cftype *cft)
+			     struct cftype *cft)
 {
 	return css_tg(css)->idle;
 }
 
 static int cpu_idle_write_s64(struct cgroup_subsys_state *css,
-				struct cftype *cft, s64 idle)
+			      struct cftype *cft, s64 idle)
 {
 	return sched_group_set_idle(css_tg(css), idle);
 }
@@ -11230,5 +11245,5 @@ const u32 sched_prio_to_wmult[40] = {
 
 void call_trace_sched_update_nr_running(struct rq *rq, int count)
 {
-        trace_sched_update_nr_running_tp(rq, count);
+	trace_sched_update_nr_running_tp(rq, count);
 }

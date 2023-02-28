@@ -4746,7 +4746,7 @@ set_next_entity(struct cfs_rq *cfs_rq, struct sched_entity *se)
 		__dequeue_entity(cfs_rq, se);
 		update_load_avg(cfs_rq, se, UPDATE_TG);
 	}
-
+	
 	update_stats_curr_start(cfs_rq, se);
 	cfs_rq->curr = se;
 
